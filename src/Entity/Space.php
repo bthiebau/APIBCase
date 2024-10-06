@@ -4,48 +4,72 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\SpaceRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Attribute\Groups;
 
 #[ORM\Entity(repositoryClass: SpaceRepository::class)]
-#[ApiResource]
+#[ApiResource(normalizationContext: ['groups' => ['spaces : read']])]
 class Space
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['spaces : read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['spaces : read'])]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['spaces : read'])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(['spaces : read'])]
     private ?float $averageRating = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['spaces : read'])]
     private ?string $image = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['spaces : read'])]
     private ?string $address = null;
 
     #[ORM\Column(length: 10)]
+    #[Groups(['spaces : read'])]
     private ?string $postalCode = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['spaces : read'])]
     private ?string $city = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['spaces : read'])]
     private ?string $country = null;
 
     #[ORM\Column]
+    #[Groups(['spaces : read'])]
     private ?int $capacity = null;
 
     #[ORM\ManyToOne(inversedBy: 'spaces')]
     #[ORM\JoinColumn(nullable: false)]
     private ?User $owner = null;
+
+    /**
+     * @var Collection<int, Room>
+     */
+    #[ORM\OneToMany(targetEntity: Room::class, mappedBy: 'space', orphanRemoval: true)]
+    private Collection $rooms;
+
+    public function __construct()
+    {
+        $this->rooms = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -168,6 +192,36 @@ class Space
     public function setOwner(?User $owner): static
     {
         $this->owner = $owner;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Room>
+     */
+    public function getRooms(): Collection
+    {
+        return $this->rooms;
+    }
+
+    public function addRoom(Room $room): static
+    {
+        if (!$this->rooms->contains($room)) {
+            $this->rooms->add($room);
+            $room->setSpace($this);
+        }
+
+        return $this;
+    }
+
+    public function removeRoom(Room $room): static
+    {
+        if ($this->rooms->removeElement($room)) {
+            // set the owning side to null (unless already changed)
+            if ($room->getSpace() === $this) {
+                $room->setSpace(null);
+            }
+        }
 
         return $this;
     }

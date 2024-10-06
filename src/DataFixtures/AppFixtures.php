@@ -2,8 +2,10 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Room;
 use App\Entity\Space;
 use App\Entity\User;
+use App\Enum\BedEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
@@ -17,7 +19,8 @@ class AppFixtures extends Fixture
     private const GENDER = ['Homme', 'Femme'];
     private const TAGS = ['Student', 'Freelance', 'Digital Nomad', 'Remote Worker'];
     private const NB_USER = 5;
-    private const NB_SPACE = 30;
+    private const NB_SPACE = 20;
+    private const NB_ROOM = 40;
     public function load(ObjectManager $manager): void
     {
     /*---------- Users ----------*/
@@ -69,7 +72,7 @@ class AppFixtures extends Fixture
             $space
                 ->setTitle($faker->words(6, true))
                 ->setDescription($faker->realText())
-                ->setAverageRating($faker->randomFloat())
+                ->setAverageRating($faker->randomFloat(1, 0, 5))
                 ->setImage($faker->imageUrl)
                 ->setAddress($faker-> address())
                 ->setPostalcode($faker->postcode)
@@ -82,6 +85,24 @@ class AppFixtures extends Fixture
                 $spaces[] = $space;
                 $manager->persist($space);
         }
+
+
+    /*---------- Room ----------*/
+        $faker = Factory::create('fr_FR');
+        $rooms = [];
+        for($i = 0; $i < self::NB_ROOM; $i++){
+            $room = new Room();
+            $room
+                ->setTitle($faker->words(6, true))
+                ->setDescription($faker->realText())
+                ->setImage($faker->imageUrl)
+                ->setPrice($faker->numberBetween(800, 1400))
+                ->setSpace($faker->randomElement($spaces))
+                ->setBed($faker->randomElement([BedEnum::OneSimpleBed, BedEnum::OneDoubleBed, BedEnum::TwoSimpleBed, BedEnum::TwoDoubleBed]));
+            $rooms[] = $room;
+            $manager->persist($room);
+        }
+        
         $manager->flush();
     }
 }
