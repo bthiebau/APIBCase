@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Space;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
@@ -16,6 +17,7 @@ class AppFixtures extends Fixture
     private const GENDER = ['Homme', 'Femme'];
     private const TAGS = ['Student', 'Freelance', 'Digital Nomad', 'Remote Worker'];
     private const NB_USER = 5;
+    private const NB_SPACE = 30;
     public function load(ObjectManager $manager): void
     {
     /*---------- Users ----------*/
@@ -59,7 +61,27 @@ class AppFixtures extends Fixture
 
         $manager->persist($admin);
 
+    /*---------- Space ----------*/
+        $faker = Factory::create('fr_FR');
+        $spaces = [];
+        for($i = 0; $i < self::NB_SPACE; $i++){
+            $space = new Space();
+            $space
+                ->setTitle($faker->words(6, true))
+                ->setDescription($faker->realText())
+                ->setAverageRating($faker->randomFloat())
+                ->setImage($faker->imageUrl)
+                ->setAddress($faker-> address())
+                ->setPostalcode($faker->postcode)
+                ->setCity($faker->city)
+                ->setCountry($faker->country())
+                ->setCapacity($faker->numberBetween(2, 10))
+                ->setOwner($faker->randomElement($users));
+                //->setAmenity
 
+                $spaces[] = $space;
+                $manager->persist($space);
+        }
         $manager->flush();
     }
 }

@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -62,6 +64,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(length: 255)]
     private ?string $country = null;
+
+    /**
+     * @var Collection<int, Space>
+     */
+    #[ORM\OneToMany(targetEntity: Space::class, mappedBy: 'owner', orphanRemoval: true)]
+    private Collection $spaces;
+
+    public function __construct()
+    {
+        $this->spaces = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -254,6 +267,36 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setCountry(string $country): static
     {
         $this->country = $country;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Space>
+     */
+    public function getSpaces(): Collection
+    {
+        return $this->spaces;
+    }
+
+    public function addSpace(Space $space): static
+    {
+        if (!$this->spaces->contains($space)) {
+            $this->spaces->add($space);
+            $space->setOwner($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSpace(Space $space): static
+    {
+        if ($this->spaces->removeElement($space)) {
+            // set the owning side to null (unless already changed)
+            if ($space->getOwner() === $this) {
+                $space->setOwner(null);
+            }
+        }
 
         return $this;
     }
