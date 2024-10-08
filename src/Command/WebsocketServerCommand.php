@@ -57,3 +57,4 @@ class WebsocketServerCommand extends Command
         return Command::FAILURE;
     }
 }
+
