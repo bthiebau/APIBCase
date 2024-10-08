@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Messages;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
