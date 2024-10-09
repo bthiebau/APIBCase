@@ -20,6 +20,7 @@ final class JWTCreatedListener
 
         $data["lastname"] = $user->getLastname();
         $data["firstname"] = $user->getFirstname();
+        $data["id"] = $user->getId();
 
         $event->setData($data);
     }

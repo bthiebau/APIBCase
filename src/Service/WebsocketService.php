@@ -40,7 +40,8 @@ class WebsocketService implements MessageComponentInterface
     public function onMessage(ConnectionInterface $from, $msg)
     {
         $data = json_decode($msg, true);
-
+        echo("data: $data");
+        echo("data: $msg");
         // if (!$data) {
         //     $from->send(json_encode(['error' => 'Invalid message format']));
         //     return;
@@ -59,7 +60,7 @@ class WebsocketService implements MessageComponentInterface
         // }
 
         // Handle incoming chat message
-        $this->handleChatMessage($from, $data);
+        // $this->handleChatMessage($from, $data);
     }
 
     // private function authenticate(ConnectionInterface $conn, string $token): void
