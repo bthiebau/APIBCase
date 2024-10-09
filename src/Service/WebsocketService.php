@@ -39,9 +39,12 @@ class WebsocketService implements MessageComponentInterface
 
     public function onMessage(ConnectionInterface $from, $msg)
     {
-        $data = json_decode($msg, true);
-        echo("data: $data");
-        echo("data: $msg");
+        echo "Message reçu : " . $msg . PHP_EOL;
+
+        // Optionnel : diffuser le message à tous les clients connectés
+         foreach ($this->clients as $client) {
+            $client->send($msg);
+        }
         // if (!$data) {
         //     $from->send(json_encode(['error' => 'Invalid message format']));
         //     return;
