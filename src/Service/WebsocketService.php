@@ -39,12 +39,27 @@ class WebsocketService implements MessageComponentInterface
 
     public function onMessage(ConnectionInterface $from, $msg)
     {
+        if(!isset($msg['type'])){
+            $from->send(json_encode([
+                'type' => 'error',
+                'data' => 'Key \'type\'is required'
+            ]));
+            return;
+        }
+
+        if ($msg['type'] === 'conversation.message.created') {
+            // Handle authentication
+            $this->handleChatMessage($from, $msg['token']);
+            return;
+        }
+        
         echo "Message reçu : " . $msg . PHP_EOL;
 
-        // Optionnel : diffuser le message à tous les clients connectés
          foreach ($this->clients as $client) {
             $client->send($msg);
         }
+
+
         // if (!$data) {
         //     $from->send(json_encode(['error' => 'Invalid message format']));
         //     return;
@@ -98,26 +113,42 @@ class WebsocketService implements MessageComponentInterface
     //     }
     // }
 
-    private function handleChatMessage(ConnectionInterface $from, array $data): void
+    private function handleChatMessage(ConnectionInterface $from, string $data): void
     {
-        if (!isset($data['content'], $data['receiver_id'])) {
-            $from->send(json_encode(['error' => 'Invalid message data']));
+        if (!isset($data['content'], $data['receiverId'], $data['senderId'])) {
+            $from->send(json_encode([
+                'type' => 'error',
+                'data' => 'Invalid message data'
+            ]));
             return;
         }
 
-        // Retrieve the sender from the clients storage
-        $sender = $this->clients[$from]['user'];
 
         // Create a new message entity
         $message = new Messages();
         $message->setContent($data['content']);
         $message->setSentDate(new \DateTimeImmutable());
+
+        //  Find the sender <user
+        $sender = $this->userRepository->find($data['senderId']);
+        if (!$sender) {
+            $from->send(json_encode([
+                'type' => 'error',
+                'data' => 'sender not found'
+            ]));
+            return;
+        }
+
         $message->setSender($sender);
 
+
         // Find the receiver user
-        $receiver = $this->userRepository->find($data['receiver_id']);
+        $receiver = $this->userRepository->find($data['receiverId']);
         if (!$receiver) {
-            $from->send(json_encode(['error' => 'Receiver not found']));
+            $from->send(json_encode([
+                'type' => 'error',
+                'data' => 'receiver not found'
+            ]));
             return;
         }
 
@@ -131,15 +162,18 @@ class WebsocketService implements MessageComponentInterface
         $serializedMessage = $this->serializer->serialize($message, 'json', ['groups' => ['messages:read']]);
 
         // Send the message to the receiver if connected
-        foreach ($this->clients as $client) {
-            $clientUser = $this->clients[$client]['user'] ?? null;
-            if ($clientUser && $clientUser->getId() === $receiver->getId()) {
-                $client->send($serializedMessage);
-            }
-        }
+        // foreach ($this->clients as $client) {
+        //     $clientUser = $this->clients[$client]['user'] ?? null;
+        //     if ($clientUser && $clientUser->getId() === $receiver->getId()) {
+        //         $client->send($serializedMessage);
+        //     }
+        // }
 
-        // Optionally, acknowledge message sent to the sender
-        $from->send(json_encode(['success' => 'Message sent']));
+
+        $from->send(json_encode([
+            'type' => 'conversation.message.added',
+            'data' => $serializedMessage
+        ]));
     }
 
     public function onClose(ConnectionInterface $conn)
