@@ -31,10 +31,10 @@ class WebsocketService implements MessageComponentInterface
         $this->clients = new \SplObjectStorage();
     }
 
-    public function onOpen(ConnectionInterface $conn)
+    public function onOpen(ConnectionInterface $from)
     {
         // Attach the new connection to the clients storage
-        $this->clients->attach($conn);
+        $this->clients->attach($from);
     }
 
     public function onMessage(ConnectionInterface $from, $msg)
@@ -48,71 +48,69 @@ class WebsocketService implements MessageComponentInterface
             ]));
             return;
         }
+        
+        if ($msg['type'] ==='authentication'){
+            // Handle authentication
+            $this->handleAuthenticate($from, $msg['data']);
+            return;
+        }
+
+        // Check if the user is authenticated
+        if (!isset($this->clients[$from]['user'])) {
+            $from->send(json_encode([
+                'type' => 'error',
+                'data' => 'Unauthorized'
+
+            ]));
+            return;
+        }
 
         if ($msg['type'] === 'conversation.message.created') {
             // Handle authentication
             $this->handleChatMessage($from, $msg['data']);
             return;
         }
-        
 
-         foreach ($this->clients as $client) {
-            $client->send($msg);
-        }
-
-
-        // if (!$data) {
-        //     $from->send(json_encode(['error' => 'Invalid message format']));
-        //     return;
-        // }
-
-        // if (isset($data['type']) && $data['type'] === 'auth') {
-        //     // Handle authentication
-        //     $this->authenticate($from, $data['token']);
-        //     return;
-        // }
-
-        // // Check if the user is authenticated
-        // if (!isset($this->clients[$from]['user'])) {
-        //     $from->send(json_encode(['error' => 'Unauthorized']));
-        //     return;
-        // }
-
-        // Handle incoming chat message
-        // $this->handleChatMessage($from, $data);
     }
 
-    // private function authenticate(ConnectionInterface $conn, string $token): void
-    // {
-    //     try {
-    //         // Decode the JWT token to get the payload
-    //         $payload = $this->jwtEncoder->decode($token);
-    //         $email = $payload['username'] ?? null;
+    private function handleAuthenticate(ConnectionInterface $from, string $token): void
+    {
+        try {
+            // Decode the JWT token to get the payload
+            $payload = $this->jwtEncoder->decode($token);
+            $email = $payload['username'] ?? null; 
+            var_dump($payload);
+            if (!$email) {
+                $from->send(json_encode([
+                    'type' => 'error',
+                    'data' => 'Invalid Token Payload'
+                ]));
+                $from->close();
+                return;
+            }
 
-    //         if (!$email) {
-    //             $conn->send(json_encode(['error' => 'Invalid token payload']));
-    //             $conn->close();
-    //             return;
-    //         }
+            // Retrieve the user from the database
+            $user = $this->userRepository->findOneBy(['email' => $email]);
 
-    //         // Retrieve the user from the database
-    //         $user = $this->userRepository->findOneBy(['email' => $email]);
+            if (!$user) {
+                $from->send(json_encode([
+                    'type' => 'error',
+                    'data' => 'User not found'
+                ]));
+                $from->close();
+                return;
+            }
 
-    //         if (!$user) {
-    //             $conn->send(json_encode(['error' => 'User not found']));
-    //             $conn->close();
-    //             return;
-    //         }
-
-    //         // Store the user in the clients storage associated with the connection
-    //         $this->clients[$conn] = ['user' => $user];
-
-    //         $conn->send(json_encode(['success' => 'Authenticated']));
-    //     } catch (\Exception $e) {
-    //         $conn->send(json_encode(['error' => 'Authentication failed']));
-    //         $conn->close();
-    //     }
-    // }
+            // Store the user in the clients storage associated with the connection
+            $this->clients[$from] = ['user' => $user];
+        } catch (\Exception $e) {
+            $from->send(json_encode([
+                'type' => 'error',
+                'data' => 'Authentification failed'
+            ]));
+            $from->close();
+        }
+    }
 
     private function handleChatMessage(ConnectionInterface $from, array $data): void
     {
@@ -163,12 +161,15 @@ class WebsocketService implements MessageComponentInterface
         $serializedMessage = $this->serializer->serialize($message, 'json', ['groups' => ['messages:read']]);
 
         // Send the message to the receiver if connected
-        // foreach ($this->clients as $client) {
-        //     $clientUser = $this->clients[$client]['user'] ?? null;
-        //     if ($clientUser && $clientUser->getId() === $receiver->getId()) {
-        //         $client->send($serializedMessage);
-        //     }
-        // }
+        foreach ($this->clients as $client) {
+            $clientUser = $this->clients[$client]['user'] ?? null;
+            if ($clientUser && $clientUser->getId() === $receiver->getId()) {
+                $client->send(json_encode([
+                    'type' => 'conversation.message.added',
+                    'data' => $serializedMessage
+                ]));
+            }
+        }
 
 
         $from->send(json_encode([
