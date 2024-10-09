@@ -39,6 +39,8 @@ class WebsocketService implements MessageComponentInterface
 
     public function onMessage(ConnectionInterface $from, $msg)
     {
+        $msg = json_decode($msg, true);
+
         if(!isset($msg['type'])){
             $from->send(json_encode([
                 'type' => 'error',
@@ -49,11 +51,10 @@ class WebsocketService implements MessageComponentInterface
 
         if ($msg['type'] === 'conversation.message.created') {
             // Handle authentication
-            $this->handleChatMessage($from, $msg['token']);
+            $this->handleChatMessage($from, $msg['data']);
             return;
         }
         
-        echo "Message reçu : " . $msg . PHP_EOL;
 
          foreach ($this->clients as $client) {
             $client->send($msg);
@@ -113,7 +114,7 @@ class WebsocketService implements MessageComponentInterface
     //     }
     // }
 
-    private function handleChatMessage(ConnectionInterface $from, string $data): void
+    private function handleChatMessage(ConnectionInterface $from, array $data): void
     {
         if (!isset($data['content'], $data['receiverId'], $data['senderId'])) {
             $from->send(json_encode([
