@@ -66,9 +66,23 @@ class Space
     #[ORM\OneToMany(targetEntity: Room::class, mappedBy: 'space', orphanRemoval: true)]
     private Collection $rooms;
 
+    /**
+     * @var Collection<int, Amenity>
+     */
+    #[ORM\ManyToMany(targetEntity: Amenity::class, mappedBy: 'space')]
+    private Collection $amenities;
+
+    /**
+     * @var Collection<int, Review>
+     */
+    #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'space', orphanRemoval: true)]
+    private Collection $reviews;
+
     public function __construct()
     {
         $this->rooms = new ArrayCollection();
+        $this->amenities = new ArrayCollection();
+        $this->reviews = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -220,6 +234,63 @@ class Space
             // set the owning side to null (unless already changed)
             if ($room->getSpace() === $this) {
                 $room->setSpace(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Amenity>
+     */
+    public function getAmenities(): Collection
+    {
+        return $this->amenities;
+    }
+
+    public function addAmenity(Amenity $amenity): static
+    {
+        if (!$this->amenities->contains($amenity)) {
+            $this->amenities->add($amenity);
+            $amenity->addSpace($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAmenity(Amenity $amenity): static
+    {
+        if ($this->amenities->removeElement($amenity)) {
+            $amenity->removeSpace($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Review>
+     */
+    public function getReviews(): Collection
+    {
+        return $this->reviews;
+    }
+
+    public function addReview(Review $review): static
+    {
+        if (!$this->reviews->contains($review)) {
+            $this->reviews->add($review);
+            $review->setSpace($this);
+        }
+
+        return $this;
+    }
+
+    public function removeReview(Review $review): static
+    {
+        if ($this->reviews->removeElement($review)) {
+            // set the owning side to null (unless already changed)
+            if ($review->getSpace() === $this) {
+                $review->setSpace(null);
             }
         }
 
